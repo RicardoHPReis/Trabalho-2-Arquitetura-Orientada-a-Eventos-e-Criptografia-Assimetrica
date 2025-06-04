@@ -12,9 +12,10 @@ class Pagamento:
 
         self.connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue="reserva-criada")
-        self.channel.queue_declare(queue="pagamento-aprovado")
-        self.channel.queue_declare(queue="pagamento-recusado")
+        self.channel.exchange_declare(exchange='sd2-pag', exchange_type='fanout', durable=True)
+
+        self.channel.queue_declare(queue="sd2-reserva-criada")
+        self.channel.queue_declare(queue="sd2-pagamento-recusado")
     
     
     def __del__(self):
@@ -31,17 +32,25 @@ class Pagamento:
     def publicar_status_pagamento(self, channel, reserva_id, valor):
         print(f"[PROCESSANDO] Pagamento da reserva {reserva_id} no valor de R${valor}")
         aprovado = random.choice([True, False])
-        status = "aprovado" if aprovado else "recusado"
+        status = "aprovado" #if aprovado else "recusado"
+        fila = "sd2-pagamento-" + status
 
         assinatura = assinar_mensagem(self.chave_privada_pagamento, reserva_id)
         mensagem = {"reserva_id": reserva_id, "status": status, "assinatura": assinatura.hex()}
 
-        fila = "pagamento-" + status
-        channel.basic_publish(
-            exchange='',
-            routing_key=fila,
-            body=json.dumps(mensagem)
-        )        
+        if status == "recusado":
+            channel.basic_publish(
+                exchange='',
+                routing_key='sd2-pagamento-recusado',
+                body=json.dumps(mensagem)
+            )
+        else:
+            channel.basic_publish(
+                exchange='sd2-pag',
+                routing_key='',
+                body=json.dumps(mensagem)
+            )
+              
         print(f"[OK] Pagamento {status} para reserva {reserva_id}. Mensagem enviada para '{fila}'.")
 
 
@@ -55,7 +64,7 @@ class Pagamento:
     def run(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         self.titulo()
-        self.channel.basic_consume(queue='reserva-criada', on_message_callback=self.callback_reserva_criada, auto_ack=True)
+        self.channel.basic_consume(queue='sd2-reserva-criada', on_message_callback=self.callback_reserva_criada, auto_ack=True)
 
         print("[MS Pagamento] Aguardando novas reservas para processar...")
         self.channel.start_consuming()

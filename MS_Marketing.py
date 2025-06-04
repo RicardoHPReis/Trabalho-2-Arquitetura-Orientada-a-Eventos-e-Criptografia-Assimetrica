@@ -16,8 +16,8 @@ class Marketing:
         self.connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
         self.channel = self.connection.channel()
         for destino in self.destinos_disponiveis:
-            self.channel.queue_declare(queue=f"promocoes-destino_{destino}")
-            fila = f"promocoes-destino_{destino}"
+            self.channel.queue_declare(queue=f"sd2-promocoes-destino_{destino}")
+            fila = f"sd2-promocoes-destino_{destino}"
             self.channel.queue_declare(
                 queue=fila
             )
@@ -41,7 +41,7 @@ class Marketing:
 
 
     def publicar_promocao(self, channel, destino):
-        fila = f"promocoes-destino_{destino}"
+        fila = f"sd2-promocoes-destino_{destino}"
         msg = self.promocoes[destino]
         channel.basic_publish(
             exchange='',

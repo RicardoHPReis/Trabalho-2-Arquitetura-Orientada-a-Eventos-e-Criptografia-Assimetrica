@@ -12,10 +12,14 @@ class Reserva:
         self.chave_publica_pagamento = chave_publica()
         self.connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
         self.channel = self.connection.channel()
-        self.channel.queue_declare(queue="reserva-criada")
-        self.channel.queue_declare(queue="pagamento-aprovado")
-        self.channel.queue_declare(queue="pagamento-recusado")
-        self.channel.queue_declare(queue="bilhete-gerado")
+        self.channel.exchange_declare(exchange='sd2-pag', exchange_type='fanout', durable=True)
+        
+        self.channel.queue_declare(queue="sd2-reserva-criada")
+        self.channel.queue_declare(queue="sd2-pagamento-aprovado", durable=True)
+        self.channel.queue_declare(queue="sd2-pagamento-recusado")
+        self.channel.queue_declare(queue="sd2-bilhete-gerado")
+        
+        self.channel.queue_bind(exchange='sd2-pag', queue="sd2-pagamento-aprovado")
 
         self.reservas = {}
         self.itinerarios = []
@@ -103,7 +107,7 @@ class Reserva:
         }
         canal.basic_publish(
             exchange='',
-            routing_key='reserva-criada',
+            routing_key='sd2-reserva-criada',
             body=json.dumps(msg)
         )
 
@@ -152,9 +156,9 @@ class Reserva:
         self.reserva_criada(reserva_id, self.channel)
         print(f"[INFO] Reserva criada com ID {reserva_id}")
 
-        self.channel.basic_consume(queue='pagamento-aprovado', on_message_callback=self.callback_pagamento)
-        self.channel.basic_consume(queue='pagamento-recusado', on_message_callback=self.callback_pagamento)
-        self.channel.basic_consume(queue='bilhete-gerado', on_message_callback=self.callback_bilhete, auto_ack=True)
+        self.channel.basic_consume(queue='sd2-pagamento-aprovado', on_message_callback=self.callback_pagamento)
+        self.channel.basic_consume(queue='sd2-pagamento-recusado', on_message_callback=self.callback_pagamento, auto_ack=True)
+        self.channel.basic_consume(queue='sd2-bilhete-gerado', on_message_callback=self.callback_bilhete, auto_ack=True)
         
         print("[*] Aguardando confirmações...")
         self.channel.start_consuming()

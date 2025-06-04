@@ -1,9 +1,9 @@
 from flask import Flask, request, render_template, jsonify
+from datetime import datetime
 import threading
+import logging
 import pika
 import json
-import logging
-from datetime import datetime
 
 app = Flask(__name__)
 
@@ -45,7 +45,7 @@ def consumir_promocoes(destinos):
     
     # Limpa filas antigas e recria
     for destino in destinos:
-        fila = f"promocoes-destino_{destino}"
+        fila = f"sd2-promocoes-destino_{destino}"
         channel.queue_delete(queue=fila)
         channel.queue_declare(queue=fila)
         channel.basic_consume(queue=fila, on_message_callback=callback, auto_ack=True)
