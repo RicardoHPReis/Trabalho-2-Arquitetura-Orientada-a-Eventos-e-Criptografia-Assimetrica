@@ -1,8 +1,8 @@
 import pika
 import json
+import random
 import uuid
 import time
-import random
 import sys
 import os
 from shared.utils import verificar_assinatura, chave_publica
@@ -13,7 +13,7 @@ class Reserva:
         self.connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue="reserva-criada")
-        self.channel.queue_declare(queue="pagamento-aprovado-rs")
+        self.channel.queue_declare(queue="pagamento-aprovado")
         self.channel.queue_declare(queue="pagamento-recusado")
         self.channel.queue_declare(queue="bilhete-gerado")
 
@@ -152,8 +152,8 @@ class Reserva:
         self.reserva_criada(reserva_id, self.channel)
         print(f"[INFO] Reserva criada com ID {reserva_id}")
 
-        self.channel.basic_consume(queue='pagamento-aprovado-rs', on_message_callback=self.callback_pagamento, auto_ack=True)
-        self.channel.basic_consume(queue='pagamento-recusado', on_message_callback=self.callback_pagamento, auto_ack=True)
+        self.channel.basic_consume(queue='pagamento-aprovado', on_message_callback=self.callback_pagamento)
+        self.channel.basic_consume(queue='pagamento-recusado', on_message_callback=self.callback_pagamento)
         self.channel.basic_consume(queue='bilhete-gerado', on_message_callback=self.callback_bilhete, auto_ack=True)
         
         print("[*] Aguardando confirmações...")

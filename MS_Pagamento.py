@@ -14,7 +14,6 @@ class Pagamento:
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue="reserva-criada")
         self.channel.queue_declare(queue="pagamento-aprovado")
-        self.channel.queue_declare(queue="pagamento-aprovado-rs")
         self.channel.queue_declare(queue="pagamento-recusado")
     
     
@@ -32,7 +31,7 @@ class Pagamento:
     def publicar_status_pagamento(self, channel, reserva_id, valor):
         print(f"[PROCESSANDO] Pagamento da reserva {reserva_id} no valor de R${valor}")
         aprovado = random.choice([True, False])
-        status = "aprovado" #if aprovado else "recusado"
+        status = "aprovado" if aprovado else "recusado"
 
         assinatura = assinar_mensagem(self.chave_privada_pagamento, reserva_id)
         mensagem = {"reserva_id": reserva_id, "status": status, "assinatura": assinatura.hex()}
@@ -42,14 +41,7 @@ class Pagamento:
             exchange='',
             routing_key=fila,
             body=json.dumps(mensagem)
-        )
-        
-        if status == "aprovado":
-            channel.basic_publish (
-            exchange='',
-            routing_key="pagamento-aprovado-rs",
-            body=json.dumps(mensagem))
-        
+        )        
         print(f"[OK] Pagamento {status} para reserva {reserva_id}. Mensagem enviada para '{fila}'.")
 
 
